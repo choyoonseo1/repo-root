@@ -1,22 +1,31 @@
 version: '3.9'
+
 services:
   backend:
     image: ${BACKEND_IMAGE}
-    container_name: backend
-    env_file:
-      - .env.prod
-    environment:
-      SPRING_PROFILES_ACTIVE: prod
-      RDS_ENDPOINT: ${RDS_ENDPOINT}
+    container_name: myapp-backend
     restart: unless-stopped
+    env_file:
+      - .env.prod         # = infra/.env.prod (deploy.yml에서 --env-file로 지정)
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      TZ: Asia/Seoul
     ports:
       - "8080:8080"
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   frontend:
     image: ${FRONTEND_IMAGE}
-    container_name: frontend
+    container_name: myapp-frontend
     depends_on:
       - backend
     restart: unless-stopped
     ports:
       - "80:80"
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"

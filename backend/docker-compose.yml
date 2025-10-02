@@ -1,14 +1,15 @@
-version: '3.9'
 services:
-  db:
-    image: mysql:8.0
-    container_name: db
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
-      MYSQL_DATABASE: myapp
+  app:
+    image: ${DOCKER_IMAGE}
+    container_name: pharmacy-app
+    restart: always
+    env_file: .env
     ports:
-      - "3307:3306"
-    volumes:
-      - dbdata:/var/lib/mysql
-volumes:
-  dbdata:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+      - TZ=Asia/Seoul
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"

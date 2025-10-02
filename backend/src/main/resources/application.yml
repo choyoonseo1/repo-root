@@ -3,7 +3,6 @@ server:
 
 spring:
   profiles:
-    active: local
     group:
       local:
         - common
@@ -11,32 +10,36 @@ spring:
         - common
 
 ---
+
 spring:
   config:
     activate:
       on-profile: common
+  jpa:
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        show_sql: false
+
+app:
+  allowed-origins: ${ALLOWED_ORIGINS:https://YOUR_DOMAIN}
 
 ---
+
 spring:
   config:
     activate:
       on-profile: local
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/myapp?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    username: ${MYSQL_USER}
-    password: ${SPRING_DATASOURCE_PASSWORD}
+    url: jdbc:mysql://${DEV_DB_HOST:127.0.0.1}:${DEV_DB_PORT:3307}/${DEV_DB_NAME:myapp}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
+    username: ${DEV_DB_USERNAME:appuser}
+    password: ${DEV_DB_PASSWORD:apppass}
   jpa:
-    database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
-      ddl-auto: update   # 최초 개발 단계에만 update 권장 → 생성 후 validate로 변경
-    properties:
-      hibernate:
-        show_sql: true
-        format_sql: true
-
-app:
-  allowed-origins: ${ALLOWED_ORIGINS:http://localhost:3000}
+      ddl-auto: update
 
 ---
 spring:
@@ -45,16 +48,9 @@ spring:
       on-profile: prod
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://${RDS_ENDPOINT:my-prod-database}:3306/myapp?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    username: ${SPRING_DATASOURCE_USERNAME}
-    password: ${SPRING_DATASOURCE_PASSWORD}
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT:3306}/${DB_NAME}?useSSL=true&serverTimezone=UTC&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
   jpa:
-    database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
-      ddl-auto: validate # 운영은 validate 고정
-    properties:
-      hibernate:
-        show_sql: false
-
-app:
-  allowed-origins: ${ALLOWED_ORIGINS:https://YOUR_DOMAIN}
+      ddl-auto: validate

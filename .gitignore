@@ -184,3 +184,13 @@ gradle-app.setting
 *.hprof
 
 # End of https://www.toptal.com/developers/gitignore/api/windows,java,intellij+all,gradle,react
+# env
+.env
+.env.*
+!.env.example
+
+# env
+.env
+.env.*
+backend/.env
+!.env.example
