@@ -1,0 +1,80 @@
+name: CI/CD Monorepo
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'infra/**'
+      - '.github/workflows/deploy.yml'
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: backend
+            context: backend
+            imagename: myapp-backend
+          - name: frontend
+            context: frontend
+            imagename: myapp-frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push ${{ matrix.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.imagename }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.imagename }}:${{ github.sha }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1) infra 폴더를 EC2로 업로드 (docker-compose.prod.yml, .env.prod 포함)
+      - name: Upload infra to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "infra/*"
+          target: "~/app/infra"
+
+      # 2) EC2에서 배포
+      - name: Deploy on EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            cd ~/app
+
+            # 최신 이미지 pull
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/myapp-backend:latest
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/myapp-frontend:latest
+
+            # compose 렌더링 
+            docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.prod config > /dev/null
+
+            # 배포
+            docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.prod up -d --pull always --remove-orphans
